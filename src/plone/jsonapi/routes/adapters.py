@@ -6,6 +6,7 @@ __docformat__ = 'plaintext'
 import logging
 import datetime
 import DateTime
+import Missing
 
 import simplejson as json
 
@@ -71,22 +72,36 @@ class ZCDataProvider(Base):
 
     def __init__(self, context):
         super(ZCDataProvider, self).__init__(context)
+        ignore = [
+            'Date',
+            'CreationDate',
+            'EffectiveDate',
+            'ExpirationDate',
+            'ModificationDate',
+            'cmf_uid',
+            'getObjSize',
+            'getIcon'
+            'id',
+            'is_folderish',
+            'meta_type',
+            'Type',
+        ]
 
-    def to_dict(self):
-        brain = self.context
-        return {
-            "id":          brain.getId,
-            "uid":         brain.UID,
-            "title":       brain.Title,
-            "description": brain.Description,
-            "url":         brain.getURL(),
-            "portal_type": brain.portal_type,
-            "created":     brain.created.ISO8601(),
-            "modified":    brain.modified.ISO8601(),
-            "effective":   brain.effective.ISO8601(),
-            "type":        brain.portal_type,
-            "tags":        brain.Subject,
+        # additional attributes to extract besides the Schema keys
+        self.attributes = {
+            "id":          "getId",
+            "uid":         "UID",
+            "title":       "Title",
+            "description": "Description",
+            "url":         "getURL",
+            "type":        "portal_type",
+            "tags":        "Subject",
         }
+        mapped = self.attributes.values()
+        for key in api.portal.get_tool("portal_catalog").schema():
+            if key in ignore or key in mapped:
+                continue
+            self.attributes[key] = key
 
 
 class DexterityDataProvider(Base):
@@ -156,6 +171,8 @@ def get_field(obj, key):
 def get_value(field):
     """ extract the value from the given field
     """
+    if field is Missing.Value:
+        return None
 
     if isinstance(field, (datetime.datetime, datetime.date, DateTime.DateTime)):
         return get_iso_date(field)
