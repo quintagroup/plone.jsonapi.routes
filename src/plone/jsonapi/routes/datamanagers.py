@@ -10,6 +10,9 @@ from zope import interface
 from plone import api
 
 from AccessControl import Unauthorized
+from plone.dexterity.utils import iterSchemata
+
+from plone.app.textfield import RichText, RichTextValue
 
 from plone.jsonapi.routes.interfaces import IDataManager
 
@@ -63,19 +66,22 @@ class DexterityDataManager(object):
 
     def __init__(self, context):
         self.context = context
-        self.schema = self.get_schema()
+        self.schemata = self.get_schema()
 
     def get_schema(self):
-        pt = api.portal.get_tool("portal_types")
-        fti = pt.getTypeInfo(self.context.portal_type)
-        return fti.lookupSchema()
+        return [schema for schema in iterSchemata(self.context)]
 
     def get_field(self, name):
-        return self.schema.get(name)
+        for schema in self.schemata:
+            if name in schema:
+                return schema.get(name)
 
     def set(self, name, value):
         field = self.get_field(name)
         logger.info("DexterityDataManager::set: name=%r, value=%r, field=%r", name, value, field)
+
+        if isinstance(field, RichText):
+            value = RichTextValue(value)
         field.set(self.context, value)
 
     def get(self, name):
