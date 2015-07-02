@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from plone import api as ploneapi
-
+from plone.jsonapi.routes import request as req
 from plone.jsonapi.routes import add_plone_route
 from plone.jsonapi.routes.api import url_for
-
+from plone.protect.authenticator import createToken
 
 def get_user_info(username=None, short=True):
     """ return the user informations
@@ -93,9 +93,10 @@ def get(context, request, username=None):
         items.append(info)
 
     return {
-        "url":   url_for("users"),
+        "url": url_for("users"),
         "count": len(items),
-        "items": items
+        "items": items,
+        "success": True
     }
 
 
@@ -107,6 +108,17 @@ def auth(context, request):
     if ploneapi.user.is_anonymous():
         request.response.setStatus(401)
         request.response.setHeader('WWW-Authenticate', 'basic realm="JSONAPI AUTH"', 1)
+    else:
+        request.response.setHeader('X-CSRF-TOKEN', createToken())
+    return {}
+
+
+@add_plone_route("/logout", "logout", methods=["POST"])
+def logout(context, request):
+    """ Authenticate
+    """
+    portal_membership = ploneapi.portal.get_tool('portal_membership')
+    portal_membership.logoutUser(request)
     return {}
 
 # vim: set ft=python ts=4 sw=4 expandtab :
