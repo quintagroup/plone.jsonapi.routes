@@ -650,6 +650,15 @@ def create_object(**kw):
 def update_object_with_data(content, record):
     """ update the content with the values from records
     """
+    try:
+        if not ploneapi.user.has_permission(
+            'Modify portal content',
+            user=ploneapi.user.get_current(),
+            obj=content
+        ):
+            raise APIError(401, "You are not allowed to modify content")
+    except Exception, e:
+        raise APIError(401, "You are not allowed to modify content")
     dm = IDataManager(content, None)
     if dm is None:
         raise APIError(400, "Update on this object is not allowed")
