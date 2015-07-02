@@ -147,6 +147,7 @@ def update_items(portal_type=None, request=None, uid=None, endpoint=None):
 
     # we have an uid -> try to get an object for it
     obj = get_object_by_uid(uid)
+
     if obj:
         record = records[0] # ignore other records if we got an uid
         obj = update_object_with_data(obj, record)
@@ -517,12 +518,6 @@ def get_object_by_uid(uid):
 
     # we try to find the object with both catalogs
     pc = get_portal_catalog()
-    rc = get_portal_reference_catalog()
-
-    # try to find the object with the reference catalog first
-    obj = rc.lookupObject(uid)
-    if obj:
-        return obj
 
     # try to find the object with the portal catalog
     res = pc(dict(UID=uid))
