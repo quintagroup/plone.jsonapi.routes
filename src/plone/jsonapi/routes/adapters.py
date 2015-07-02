@@ -14,9 +14,10 @@ from zope import component
 
 from plone import api
 
-from plone.dexterity.schema import SCHEMA_CACHE
-from plone.dexterity.interfaces import IDexterityContent
 
+from plone.dexterity.interfaces import IDexterityContent
+from plone.dexterity.utils import iterSchemata
+from plone.app.textfield import RichTextValue
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.ZCatalog.interfaces import ICatalogBrain
 from Products.ATContentTypes.interfaces import IATContentType
@@ -97,9 +98,9 @@ class DexterityDataProvider(Base):
 
     def __init__(self, context):
         super(DexterityDataProvider, self).__init__(context)
-
-        schema = SCHEMA_CACHE.get(context.portal_type)
-        self.keys = schema.names()
+        self.keys = []
+        for schema in iterSchemata(context):
+            self.keys += [x for x in schema]
 
 
 class ATDataProvider(Base):
@@ -162,6 +163,9 @@ def get_value(field):
 
     if hasattr(field, "filename"):
         return get_file_dict(field)
+
+    if isinstance(field, RichTextValue):
+        return field.output
 
     if not is_json_serializable(field):
         return None
