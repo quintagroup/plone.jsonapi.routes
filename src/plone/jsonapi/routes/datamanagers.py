@@ -79,10 +79,13 @@ class DexterityDataManager(object):
     def set(self, name, value):
         field = self.get_field(name)
         logger.info("DexterityDataManager::set: name=%r, value=%r, field=%r", name, value, field)
-
-        if isinstance(field, RichText):
-            value = RichTextValue(value)
-        field.set(self.context, value)
+        if field:
+            if isinstance(field, RichText):
+                value = RichTextValue(value)
+            if field.get(self.context) != value:
+                field.set(self.context, value)
+                return True
+        return False
 
     def get(self, name):
         field = self.get_field(name)

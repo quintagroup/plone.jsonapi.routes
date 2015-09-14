@@ -135,6 +135,9 @@ def to_dict(obj, keys):
     for key in keys:
         field = get_field(obj, key)
         out[key] = get_value(field)
+        
+    out["permissions"] = get_allowed_permissions(obj)
+    
     if out.get("workflow_info"):
         logger.warn("Workflow Info ommitted since the key 'workflow_info' was ",
                 "found in the current schema")
@@ -143,6 +146,7 @@ def to_dict(obj, keys):
     out["workflow_info"] = wf_info
     out["state"] = wf_info.get("status")
     return out
+
 
 
 def get_field(obj, key):
@@ -251,6 +255,12 @@ def get_wf_info(obj):
         "transitions":  transitions
     }
 
+
+def get_allowed_permissions(obj):
+    return {
+        "view": api.user.has_permission("View", obj=obj),
+        "edit": api.user.has_permission("Modify portal content", obj=obj),
+    }
 
 def to_transition_info(transition):
     """ return the transition information

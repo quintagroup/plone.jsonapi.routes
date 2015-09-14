@@ -7,7 +7,7 @@ from plone.jsonapi.routes.api import get_record
 from plone.jsonapi.routes.api import create_items
 from plone.jsonapi.routes.api import update_items
 from plone.jsonapi.routes.api import delete_items
-
+from plone.jsonapi.routes.api import get_sharing
 from plone.jsonapi.routes.api import url_for
 
 
@@ -60,5 +60,14 @@ def delete(context, request, uid=None):
         "count": len(items),
         "items": items,
     }
+    
+    
+@add_plone_route("/sharing", "sharing", methods=["GET"])
+@add_plone_route("/sharing/<string:uid>", "sharing", methods=["GET"])
+def sharing(context, request, uid=None):
+    """ sharing content
+    """
+    return get_sharing(uid=uid)
+
 
 # vim: set ft=python ts=4 sw=4 expandtab :

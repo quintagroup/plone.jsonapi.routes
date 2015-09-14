@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import logging
+from zope.event import notify
+from zope.lifecycleevent import ObjectModifiedEvent
 
 from plone import api as ploneapi
 from plone.jsonapi.core import router
-
 from AccessControl import Unauthorized
 
 from Products.CMFCore.interfaces import ISiteRoot
@@ -121,6 +122,8 @@ def create_items(portal_type=None, request=None, uid=None, endpoint=None):
             portal_type = record.get("portal_type", None)
         id = record.get("id", None)
         title = record.get("title", None)
+        if not title:
+            raise APIError(400, "No Objects could be created")
         obj = create_object_in_container(dest, portal_type, id=id, title=title)
         # update the object
         update_object_with_data(obj, record)
@@ -214,6 +217,20 @@ def delete_items(portal_type=None, request=None, uid=None, endpoint=None):
 
     return results
 
+# GET RECORD
+def get_sharing(uid=None):
+    """ returns a single record
+    """
+    obj = None
+    if uid is not None:
+        obj = get_object_by_uid(uid)
+    else:
+        form = req.get_form()
+        obj = get_object_by_record(form)
+    if obj is None:
+        raise APIError(404, "No object found")
+    items = {}
+    return items
 
 # -----------------------------------------------------------------------------
 #   Data Functions
@@ -408,10 +425,10 @@ def get_locally_allowed_types(obj):
     """
     if not is_folderish(obj):
         return []
-    method = getattr(obj, "getLocallyAllowedTypes", None)
+    method = getattr(obj, "allowedContentTypes", None)
     if not callable(method):
         return []
-    return method()
+    return [item.factory for item in method()]
 
 
 def url_for(endpoint, **values):
@@ -540,7 +557,6 @@ def get_object_by_path(path):
     pc = get_portal_catalog()
     portal = get_portal()
     portal_path = get_path(portal)
-
     if not path.startswith(portal_path):
         raise APIError(404, "Not a physical path inside the portal")
 
@@ -662,6 +678,8 @@ def update_object_with_data(content, record):
     dm = IDataManager(content, None)
     if dm is None:
         raise APIError(400, "Update on this object is not allowed")
+    
+    changed = []
     for k, v in record.items():
         try:
             success = dm.set(k, v)
@@ -673,6 +691,7 @@ def update_object_with_data(content, record):
             continue
 
         logger.info("update_object_with_data::field %r updated with value=%r", k, v)
+        changed.append(success)
 
     # do a wf transition
     if record.get("transition", None):
@@ -681,7 +700,8 @@ def update_object_with_data(content, record):
         do_action_for(content, t)
 
     # reindex the object
-    content.reindexObject()
+    if any(changed):
+        notify(ObjectModifiedEvent(content))
     return content
 
 # vim: set ft=python ts=4 sw=4 expandtab :
